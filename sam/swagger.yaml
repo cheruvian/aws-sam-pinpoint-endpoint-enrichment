@@ -1,0 +1,145 @@
+---
+swagger: '2.0'
+info:
+  title: aws-sam-pinpoint-endpoint-enrichment
+schemes:
+- https
+paths:
+  "/my-endpoints/{endpoint-id}":
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: endpoint-id
+        in: path
+        required: true
+        type: string
+      security:
+      - sigv4: []
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            "$ref": "#/definitions/PinpointEndpoint"
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+        uri: arn:aws:apigateway:<<region>>:lambda:path/2015-03-31/functions/arn:aws:lambda:<<region>>:<<accountId>>:function:${stageVariables.LambdaFunctionName}/invocations
+        passthroughBehavior: when_no_templates
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+        requestTemplates:
+          application/json: ::require::endpoint-request.json::
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: endpoint-id
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            "$ref": "#/definitions/PinpointEndpoint"
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+        uri: arn:aws:apigateway:<<region>>:lambda:path/2015-03-31/functions/arn:aws:lambda:<<region>>:<<accountId>>:function:${stageVariables.LambdaFunctionName}/invocations
+        passthroughBehavior: when_no_templates
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+        requestTemplates:
+          application/json: ::require::endpoint-request.json::
+definitions:
+  PinpointEndpoint:
+    title: "Something"
+    description: "Pinpoint Endpoint"
+    type: "object"
+    properties:
+      ChannelType:
+        type: "string"
+      Address:
+        type: "string"
+      EndpointStatus:
+        type: "string"
+      OptOut:
+        type: "string"
+      RequestId:
+        type: "string"
+      Location:
+        $ref: "#/definitions/PinpointEndpointLocation"
+      Demographic:
+        $ref: "#/definitions/EndpointDemographic"
+      EffectiveDate:
+        type: "string"
+      Attributes:
+        type: "object"
+      Metrics:
+        type: "object"
+      ApplicationId:
+        type: "string"
+      Id:
+        type: "string"
+      CohortId:
+        type: "string"
+      CreationDate:
+        type: "string"
+  PinpointEndpointLocation:
+    description: "Endpoint location data"
+    type: "object"
+    properties:
+      Latitude:
+        type: "number"
+      Longitude:
+        type: "number"
+      PostalCode:
+        type: "string"
+      City:
+        type: "string"
+      Region:
+        type: "string"
+      Country:
+        type: "string"
+  PinpointEndpointDemographic:
+    description: "Endpoint demographic data"
+    type: "object"
+    properties:
+      Make:
+        type: "string"
+      Model:
+        type: "string"
+      ModelVersion:
+        type: "string"
+      Timezone:
+        type: "string"
+      Locale:
+        type: "string"
+      AppVersion:
+        type: "string"
+      Platform:
+        type: "string"
+      PlatformVersion:
+        type: "string"
+x-amazon-apigateway-request-validators:
+  Validate body:
+    validateRequestParameters: false
+    validateRequestBody: true
+  Validate query string parameters and headers:
+    validateRequestParameters: true
+    validateRequestBody: false
+securityDefinitions:
+  sigv4:
+    type: apiKey
+    name: Authorization
+    in: header
+    x-amazon-apigateway-authtype: awsSigv4

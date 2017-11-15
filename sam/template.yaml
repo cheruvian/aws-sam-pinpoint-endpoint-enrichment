@@ -1,0 +1,97 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM Template for an Lambda backed API Gateway wrapper for Amazon Pinpoint.
+Parameters:
+  PinpointAppId:
+    Description: The AppId for the Lambda to register endpoints in.
+    Type: String
+  LambdaFunctionName:
+    Description: The name of the Lambda function.
+    Default: aws-sam-pinpoint-endpoint-enrichment
+    Type: String
+  ApiGatewayStageName:
+    Description: The name of the API Gateway stage.
+    Default: Prod
+    Type: String
+Outputs:
+  ApiUrl:
+    Description: URL of your API endpoint
+    Value: !Join
+      - ''
+      - - https://
+        - !Ref ApiGatewayApi
+        - '.execute-api.'
+        - !Ref 'AWS::Region'
+        - '.amazonaws.com/'
+        - !Ref ApiGatewayStageName
+Resources:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      DefinitionUri: ../target/swagger.yaml
+      StageName: !Ref ApiGatewayStageName
+      Variables:
+        Region: !Ref AWS::Region
+        AccountId: !Ref AWS::AccountId
+        LambdaFunctionName: !Ref PinpointEndpointEnricherLambda
+  PinpointEndpointEnricherLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref LambdaFunctionName
+      Description: A Lambda function that enriches endpoints for Amazon Pinpoint.
+      Handler: com.cheruvia.aws.pinpoint.EndpointEnrichmentHandler::handleRequest
+      CodeUri: ../target/aws-sam-pinpoint-endpoint-enrichment-shaded.jar
+      MemorySize: 192
+      Runtime: java8
+      Timeout: 300
+      Role:
+        Fn::GetAtt:
+          - PinpointEndpointEnricherLambdaRole
+          - Arn
+      Environment:
+        Variables:
+          APP_ID:
+            Ref: PinpointAppId
+      Events:
+        GetEndpointApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /my-endpoints/{endpoint-id}
+            Method: get
+        UpdateEndpointApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /my-endpoints/{endpoint-id}
+            Method: post
+  PinpointEndpointEnricherLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  PinpointEndpointEnricherLambdaRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref PinpointEndpointEnricherLambdaRole
+      PolicyName: PinpointEndpointEnricherLambdaRolePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - mobiletargeting:UpdateEndpoint
+              - mobiletargeting:GetEndpoint
+            Resource: '*'

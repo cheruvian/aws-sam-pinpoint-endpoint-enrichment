@@ -1,0 +1,5 @@
+{
+  "Method": "$context.httpMethod",
+  "Endpoint": $input.body,
+  "EndpointId": "$input.params('endpoint-id')"
+}
